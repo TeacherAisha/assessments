@@ -20,25 +20,44 @@ body {
   inset: 0;
   background: #EAF3FF;
   display: flex;
-  flex-direction: column;
+  justify-content: center;
   align-items: center;
-  padding: 20px;
-  overflow-y: auto;
   z-index: 9999;
+  padding: 20px;
 }
 
-#warningBox {
+/* TWO COLUMN LAYOUT */
+#startContainer {
+  display: flex;
+  gap: 30px;
+  max-width: 900px;
+  width: 100%;
+}
+
+#rulesBox {
+  flex: 2;
   background: white;
   padding: 20px;
   border-radius: 12px;
-  max-width: 600px;
   line-height: 1.6;
 }
 
+#startPanel {
+  flex: 1;
+  background: white;
+  padding: 20px;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+/* BUTTON */
 #startBtn {
-  margin-top: 10px;
-  padding: 15px 30px;
-  font-size: 20px;
+  margin-top: 20px;
+  padding: 15px 25px;
+  font-size: 18px;
   border-radius: 10px;
   border: none;
   background: grey;
@@ -51,7 +70,7 @@ body {
   cursor: pointer;
 }
 
-/* TOP */
+/* TOP BAR */
 #timer {
   position: fixed;
   top: 10px;
@@ -131,6 +150,22 @@ body {
   z-index: 9999999;
 }
 
+/* NON-BLOCKING WARNING */
+#violationOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: red;
+  color: white;
+  display: none;
+  z-index: 9999;
+  text-align: center;
+  padding: 15px;
+  font-size: 18px;
+  font-weight: bold;
+}
+
 /* IFRAME */
 iframe {
   width: calc(100% - 260px);
@@ -140,6 +175,7 @@ iframe {
 
 /* MOBILE */
 @media (max-width:768px){
+  #startContainer { flex-direction: column; }
   #logBox { display:none; }
 
   #timer, #warningCounter {
@@ -167,41 +203,46 @@ iframe {
 <!-- START -->
 <div id="warningScreen">
 
-  <h1>Secured OLC Assessment</h1>
+  <div id="startContainer">
 
-  <div id="warningBox">
-    <p>Stay on this page during the test</p>
-    <p>Do not switch tabs or apps</p>
-    <p>You must stay in full screen (if supported on your device)</p>
-    <p>Your activity is monitored</p>
-    <p>If you break the rules, the test will automatically end</p>
+    <div id="rulesBox">
+      <h2>Rules</h2>
+      <p>Stay on this page during the test</p>
+      <p>Do not switch tabs or apps</p>
+      <p>You must stay in full screen (if supported)</p>
+      <p>Your activity is monitored</p>
+      <p>If you break the rules, the test will end</p>
 
-    <br>
+      <br>
 
-    <p>If you switch to another page, you will get 3 warnings.</p>
-    <p>After the third warning, your assessment will be closed.</p>
-    <p>You will get only 20 seconds to submit what you have done so far.</p>
+      <p>3 warnings allowed</p>
+      <p>After 3rd warning → 20 seconds to submit</p>
 
-    <br>
+      <br>
 
-    <p>If you are done early, click submit on the assessment.</p>
-    <p>You will get only 2 extra minutes after time ends.</p>
+      <p>2 extra minutes given when time ends</p>
+    </div>
+
+    <div id="startPanel">
+      <label>
+        <input type="checkbox" id="acceptRules">
+        I understand the rules
+      </label>
+
+      <button id="startBtn" disabled>Start Assessment</button>
+    </div>
+
   </div>
-
-  <div style="margin-top:20px; text-align:center;">
-    <label>
-      <input type="checkbox" id="acceptRules">
-      I understand the rules
-    </label><br><br>
-
-    <button id="startBtn" disabled>Start Assessment</button>
-  </div>
-
 </div>
 
 <!-- TOP -->
 <div id="timer">40:00</div>
 <div id="warningCounter">Warnings: 0 / 3</div>
+
+<!-- WARNING BAR -->
+<div id="violationOverlay">
+  ⚠ Rules broken — You have <span id="violationCountdown">20</span> seconds to submit your work before it is lost.
+</div>
 
 <!-- LOG -->
 <div id="logBox">
@@ -228,8 +269,8 @@ iframe {
 
 let started = false;
 let violations = 0;
-let timeLeft = 40*60;
 let ending = false;
+let timeLeft = 40*60;
 
 const isMobile = /Android|iPhone/i.test(navigator.userAgent);
 
@@ -269,11 +310,6 @@ function startTimer(){
       `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
 
     timeLeft--;
-
-    if(timeLeft<0){
-      log("Time ended");
-    }
-
   },1000);
 }
 
@@ -298,14 +334,27 @@ document.addEventListener("visibilitychange",()=>{
     }
 
     if(violations>=3){
+
       c.classList.add("flash-red");
       ending=true;
 
       log("Max violations reached");
 
-      setTimeout(()=>{
-        endTest("3 violations detected");
-      },20000);
+      const bar = document.getElementById("violationOverlay");
+      bar.style.display="block";
+
+      let countdown = 20;
+      const el = document.getElementById("violationCountdown");
+
+      const interval = setInterval(()=>{
+        countdown--;
+        el.textContent = countdown;
+
+        if(countdown<=0){
+          clearInterval(interval);
+          endTest("3 violations detected");
+        }
+      },1000);
     }
   }
 });

@@ -251,6 +251,7 @@ iframe {
 
       <p>You will receive warnings for breaking the rules.</p>
       <p>Repeated violations will be logged automatically.</p>
+      <p>After the assessment timer ends, you will receive a 3-minute submission buffer.</p>
     </div>
 
     <div id="startPanel">
@@ -353,6 +354,8 @@ document.getElementById("startBtn").onclick = async ()=>{
 /* TIMER */
 function startTimer(){
 
+  let gracePeriod = false;
+
   setInterval(()=>{
 
     if(ending) return;
@@ -365,8 +368,27 @@ function startTimer(){
 
     timeLeft--;
 
-    if(timeLeft < 0){
-      endTest("Time is up");
+    /* MAIN TIMER ENDED */
+    if(timeLeft < 0 && !gracePeriod){
+
+      gracePeriod = true;
+
+      timeLeft = 3 * 60;
+
+      log("Main timer ended — 3 minute grace period started");
+
+      const bar = document.getElementById("violationOverlay");
+
+      bar.style.display = "block";
+
+      bar.innerHTML =
+        "⏰ Time is up. You now have 3 extra minutes to submit your work.";
+    }
+
+    /* GRACE PERIOD ENDED */
+    else if(timeLeft < 0 && gracePeriod){
+
+      endTest("Assessment time ended");
     }
 
   },1000);

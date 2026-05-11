@@ -70,7 +70,7 @@ body {
   cursor: pointer;
 }
 
-/* TOP BAR */
+/* TIMER */
 #timer {
   position: fixed;
   top: 10px;
@@ -79,13 +79,16 @@ body {
   color: white;
   padding: 10px;
   border-radius: 8px;
+  font-weight: bold;
 }
 
+/* VIOLATION COUNTER */
 #violationCounter {
   position: fixed;
   top: 60px;
   right: 280px;
-  background: white;
+  background: #d62828;
+  color: white;
   padding: 8px;
   border-radius: 8px;
   font-weight: bold;
@@ -102,9 +105,10 @@ body {
   overflow-y: auto;
   padding: 10px;
   font-size: 12px;
+  border-left: 1px solid #ddd;
 }
 
-/* FULLSCREEN */
+/* FULLSCREEN PANEL */
 #controlPanel {
   position: fixed;
   inset: 0;
@@ -124,6 +128,7 @@ body {
   color: white;
   border: none;
   border-radius: 10px;
+  cursor: pointer;
 }
 
 /* FINAL SCREEN */
@@ -136,6 +141,8 @@ body {
   align-items: center;
   flex-direction: column;
   z-index: 9999999;
+  text-align: center;
+  padding: 20px;
 }
 
 /* IFRAME */
@@ -145,7 +152,7 @@ iframe {
   border: none;
 }
 
-/* MOBILE */
+/* MOBILE/TABLET */
 @media (max-width:768px){
 
   #startContainer {
@@ -163,6 +170,7 @@ iframe {
     display: flex;
     align-items: center;
     justify-content: center;
+    font-size: 14px;
   }
 
   #timer {
@@ -175,11 +183,13 @@ iframe {
     left: 50%;
     width: 50%;
     right: auto;
+    background: #d62828;
+    color: white;
   }
 
   iframe {
     width: 100%;
-    height: calc(100vh - 100px);
+    height: calc(100vh - 45px);
     margin-top: 45px;
   }
 }
@@ -196,7 +206,7 @@ iframe {
     <div id="rulesBox">
       <h2>Rules</h2>
 
-      <p>Stay on this page during the test.</p>
+      <p>Stay on this page during the assessment.</p>
       <p>Do not switch tabs or apps.</p>
       <p>You must stay in full screen (if supported).</p>
       <p>Your activity is monitored.</p>
@@ -220,28 +230,30 @@ iframe {
 
 </div>
 
-<!-- TOP BAR -->
+<!-- TIMER -->
 <div id="timer">40:00</div>
 
+<!-- VIOLATION COUNTER -->
 <div id="violationCounter">
   Violations recorded: 0
 </div>
 
 <!-- LOG -->
 <div id="logBox">
-  <b>Activity Log</b><br>
+  <b>Activity Log</b><br><br>
   <div id="logContent"></div>
 </div>
 
 <!-- FULLSCREEN WARNING -->
 <div id="controlPanel">
   <h1>Fullscreen Required</h1>
+
   <button id="reenterBtn">
     RETURN TO FULLSCREEN
   </button>
 </div>
 
-<!-- FINAL SCREEN -->
+<!-- FINAL MESSAGE -->
 <div id="finalScreen">
   <h1>Assessment Status</h1>
   <p id="reason"></p>
@@ -249,7 +261,7 @@ iframe {
 
 <!-- GOOGLE FORM -->
 <iframe
-src="https://docs.google.com/forms/d/e/1FAIpQLSfgvu6j9_LtEUYJ5lfR0KkFeGwpGqy2I0ZOOQfLV-MIfzP2Pw/viewform?embedded=true">
+src="https://docs.google.com/forms/d/e/1FAIpQLSd_K37fzY-q5Osuj3wdeoB3X8QvXAAuAGMMSt-Zej4gyKUCig/viewform?embedded=true">
 </iframe>
 
 <script>
@@ -262,7 +274,9 @@ let timerInterval;
 
 /* LOG FUNCTION */
 function log(msg){
-  document.getElementById("logContent").innerHTML += msg + "<br>";
+
+  document.getElementById("logContent").innerHTML +=
+    msg + "<br>";
 }
 
 /* ENABLE START BUTTON */
@@ -285,7 +299,7 @@ document.getElementById("startBtn").onclick = async ()=>{
 
   document.getElementById("warningScreen").style.display = "none";
 
-  try{
+  try {
     await document.documentElement.requestFullscreen();
   } catch(e){}
 
@@ -340,9 +354,7 @@ document.addEventListener("visibilitychange",()=>{
     document.getElementById("violationCounter").textContent =
       `Violations recorded: ${violations}`;
 
-    log(
-      "Violation detected (" + violations + ")"
-    );
+    log("Violation detected (" + violations + ")");
   }
 });
 
@@ -358,9 +370,7 @@ document.addEventListener("fullscreenchange",()=>{
     document.getElementById("violationCounter").textContent =
       `Violations recorded: ${violations}`;
 
-    log(
-      "Fullscreen exit violation (" + violations + ")"
-    );
+    log("Fullscreen exit violation (" + violations + ")");
 
     document.getElementById("controlPanel").style.display = "flex";
   }
@@ -369,7 +379,7 @@ document.addEventListener("fullscreenchange",()=>{
 /* RETURN TO FULLSCREEN */
 document.getElementById("reenterBtn").onclick = async ()=>{
 
-  try{
+  try {
 
     await document.documentElement.requestFullscreen();
 

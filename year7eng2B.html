@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Secured OLC Assessment</title>
+
+<style>
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #EAF3FF;
+  color: #1b1b1b;
+  overflow: hidden;
+}
+
+/* START SCREEN */
+#warningScreen {
+  position: fixed;
+  inset: 0;
+  background: #EAF3FF;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  padding: 20px;
+  overflow-y: auto;
+}
+
+#startContainer {
+  display: flex;
+  gap: 30px;
+  max-width: 900px;
+  width: 100%;
+}
+
+#rulesBox {
+  flex: 2;
+  background: white;
+  padding: 20px;
+  border-radius: 12px;
+  line-height: 1.6;
+}
+
+#startPanel {
+  flex: 1;
+  background: white;
+  padding: 20px;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+/* BUTTON */
+#startBtn {
+  margin-top: 20px;
+  padding: 15px 25px;
+  font-size: 18px;
+  border-radius: 10px;
+  border: none;
+  background: grey;
+  color: white;
+  cursor: not-allowed;
+}
+
+#startBtn.active {
+  background: #2d7dd2;
+  cursor: pointer;
+}
+
+/* TOP BAR */
+#timer {
+  position: fixed;
+  top: 10px;
+  right: 280px;
+  background: #1f3b57;
+  color: white;
+  padding: 10px;
+  border-radius: 8px;
+}
+
+#violationCounter {
+  position: fixed;
+  top: 60px;
+  right: 280px;
+  background: white;
+  padding: 8px;
+  border-radius: 8px;
+  font-weight: bold;
+}
+
+/* LOG */
+#logBox {
+  position: fixed;
+  right: 0;
+  top: 0;
+  width: 260px;
+  height: 100vh;
+  background: white;
+  overflow-y: auto;
+  padding: 10px;
+  font-size: 12px;
+}
+
+/* FULLSCREEN */
+#controlPanel {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.95);
+  display: none;
+  z-index: 999999;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  color: white;
+}
+
+#reenterBtn {
+  padding: 25px;
+  font-size: 24px;
+  background: red;
+  color: white;
+  border: none;
+  border-radius: 10px;
+}
+
+/* FINAL SCREEN */
+#finalScreen {
+  position: fixed;
+  inset: 0;
+  background: #EAF3FF;
+  display: none;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  z-index: 9999999;
+}
+
+/* IFRAME */
+iframe {
+  width: calc(100% - 260px);
+  height: 100vh;
+  border: none;
+}
+
+/* MOBILE */
+@media (max-width:768px){
+
+  #startContainer {
+    flex-direction: column;
+  }
+
+  #logBox {
+    display: none;
+  }
+
+  #timer,
+  #violationCounter {
+    top: 0;
+    height: 45px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  #timer {
+    left: 0;
+    width: 50%;
+    right: auto;
+  }
+
+  #violationCounter {
+    left: 50%;
+    width: 50%;
+    right: auto;
+  }
+
+  iframe {
+    width: 100%;
+    height: calc(100vh - 100px);
+    margin-top: 45px;
+  }
+}
+</style>
+</head>
+
+<body>
+
+<!-- START SCREEN -->
+<div id="warningScreen">
+
+  <div id="startContainer">
+
+    <div id="rulesBox">
+      <h2>Rules</h2>
+
+      <p>Stay on this page during the test.</p>
+      <p>Do not switch tabs or apps.</p>
+      <p>You must stay in full screen (if supported).</p>
+      <p>Your activity is monitored.</p>
+      <p>All violations are recorded.</p>
+    </div>
+
+    <div id="startPanel">
+
+      <label>
+        <input type="checkbox" id="acceptRules">
+        I understand the rules
+      </label>
+
+      <button id="startBtn" disabled>
+        Start Assessment
+      </button>
+
+    </div>
+
+  </div>
+
+</div>
+
+<!-- TOP BAR -->
+<div id="timer">40:00</div>
+
+<div id="violationCounter">
+  Violations recorded: 0
+</div>
+
+<!-- LOG -->
+<div id="logBox">
+  <b>Activity Log</b><br>
+  <div id="logContent"></div>
+</div>
+
+<!-- FULLSCREEN WARNING -->
+<div id="controlPanel">
+  <h1>Fullscreen Required</h1>
+  <button id="reenterBtn">
+    RETURN TO FULLSCREEN
+  </button>
+</div>
+
+<!-- FINAL SCREEN -->
+<div id="finalScreen">
+  <h1>Assessment Status</h1>
+  <p id="reason"></p>
+</div>
+
+<!-- GOOGLE FORM -->
+<iframe
+src="https://docs.google.com/forms/d/e/1FAIpQLSfgvu6j9_LtEUYJ5lfR0KkFeGwpGqy2I0ZOOQfLV-MIfzP2Pw/viewform?embedded=true">
+</iframe>
+
+<script>
+
+let started = false;
+let ended = false;
+let violations = 0;
+let timeLeft = 40 * 60;
+let timerInterval;
+
+/* LOG FUNCTION */
+function log(msg){
+  document.getElementById("logContent").innerHTML += msg + "<br>";
+}
+
+/* ENABLE START BUTTON */
+document.getElementById("acceptRules").onchange = (e)=>{
+
+  const btn = document.getElementById("startBtn");
+
+  btn.disabled = !e.target.checked;
+
+  btn.classList.toggle(
+    "active",
+    e.target.checked
+  );
+};
+
+/* START ASSESSMENT */
+document.getElementById("startBtn").onclick = async ()=>{
+
+  started = true;
+
+  document.getElementById("warningScreen").style.display = "none";
+
+  try{
+    await document.documentElement.requestFullscreen();
+  } catch(e){}
+
+  log("Assessment started");
+
+  startTimer();
+};
+
+/* TIMER */
+function startTimer(){
+
+  timerInterval = setInterval(()=>{
+
+    if(ended) return;
+
+    let m = Math.floor(timeLeft / 60);
+    let s = timeLeft % 60;
+
+    document.getElementById("timer").textContent =
+      `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+
+    if(timeLeft <= 0){
+
+      clearInterval(timerInterval);
+
+      ended = true;
+
+      document.getElementById("finalScreen").style.display = "flex";
+
+      document.getElementById("reason").innerText =
+        "Time is up, please submit your work.";
+
+      log("Time ended");
+
+      return;
+    }
+
+    timeLeft--;
+
+  },1000);
+}
+
+/* TAB SWITCH DETECTION */
+document.addEventListener("visibilitychange",()=>{
+
+  if(!started || ended) return;
+
+  if(document.hidden){
+
+    violations++;
+
+    document.getElementById("violationCounter").textContent =
+      `Violations recorded: ${violations}`;
+
+    log(
+      "Violation detected (" + violations + ")"
+    );
+  }
+});
+
+/* FULLSCREEN EXIT DETECTION */
+document.addEventListener("fullscreenchange",()=>{
+
+  if(!started || ended) return;
+
+  if(!document.fullscreenElement){
+
+    violations++;
+
+    document.getElementById("violationCounter").textContent =
+      `Violations recorded: ${violations}`;
+
+    log(
+      "Fullscreen exit violation (" + violations + ")"
+    );
+
+    document.getElementById("controlPanel").style.display = "flex";
+  }
+});
+
+/* RETURN TO FULLSCREEN */
+document.getElementById("reenterBtn").onclick = async ()=>{
+
+  try{
+
+    await document.documentElement.requestFullscreen();
+
+    document.getElementById("controlPanel").style.display = "none";
+
+  } catch(e){}
+};
+
+</script>
+
+</body>
+</html>

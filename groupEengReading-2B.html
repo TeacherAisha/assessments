@@ -24,10 +24,9 @@ body {
   align-items: center;
   z-index: 9999;
   padding: 20px;
-  overflow-y: auto; /* FIX: allow scroll */
+  overflow-y: auto;
 }
 
-/* TWO COLUMN LAYOUT */
 #startContainer {
   display: flex;
   gap: 30px;
@@ -54,7 +53,6 @@ body {
   align-items: center;
 }
 
-/* BUTTON */
 #startBtn {
   margin-top: 20px;
   padding: 15px 25px;
@@ -82,7 +80,7 @@ body {
   border-radius: 8px;
 }
 
-#warningCounter {
+#violationCounter {
   position: fixed;
   top: 60px;
   right: 280px;
@@ -91,18 +89,6 @@ body {
   border-radius: 8px;
   font-weight: bold;
 }
-
-/* FLASH */
-@keyframes flashYellow {
-  0%,100% { background: gold; }
-  50% { background: transparent; }
-}
-@keyframes flashRed {
-  0%,100% { background: red; color:white; }
-  50% { background: transparent; }
-}
-.flash-yellow { animation: flashYellow 0.6s infinite; }
-.flash-red { animation: flashRed 0.6s infinite; }
 
 /* LOG */
 #logBox {
@@ -139,7 +125,7 @@ body {
   border-radius: 10px;
 }
 
-/* FINAL */
+/* FINAL SCREEN */
 #finalScreen {
   position: fixed;
   inset: 0;
@@ -149,22 +135,6 @@ body {
   align-items: center;
   flex-direction: column;
   z-index: 9999999;
-}
-
-/* WARNING BAR */
-#violationOverlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  background: red;
-  color: white;
-  display: none;
-  z-index: 9999;
-  text-align: center;
-  padding: 15px;
-  font-size: 18px;
-  font-weight: bold;
 }
 
 /* IFRAME */
@@ -179,21 +149,11 @@ iframe {
 
   #startContainer {
     flex-direction: column;
-    max-height: 100vh;
-  }
-
-  #warningScreen {
-    align-items: flex-start;
-    overflow-y: auto;
-  }
-
-  #startPanel {
-    margin-top: 15px;
   }
 
   #logBox { display:none; }
 
-  #timer, #warningCounter {
+  #timer, #violationCounter {
     top: 0;
     height: 45px;
     display: flex;
@@ -202,7 +162,7 @@ iframe {
   }
 
   #timer { left:0; width:50%; right:auto; }
-  #warningCounter { left:50%; width:50%; right:auto; }
+  #violationCounter { left:50%; width:50%; right:auto; }
 
   iframe {
     width: 100%;
@@ -215,7 +175,7 @@ iframe {
 
 <body>
 
-<!-- START -->
+<!-- START SCREEN -->
 <div id="warningScreen">
 
   <div id="startContainer">
@@ -226,13 +186,7 @@ iframe {
       <p>Do not switch tabs or apps</p>
       <p>You must stay in full screen (if supported)</p>
       <p>Your activity is monitored</p>
-      <p>If you break the rules, the test will end</p>
-
-      <br>
-
-      <p>You will receive up to three warnings for breaking the rules.</p>
-      <p>After the third warning, you will have 20 seconds to submit your work before the assessment closes.</p>
-      <p>When the time ends, you will be given an additional 2 minutes to submit your work.</p>
+      <p>All violations are recorded</p>
     </div>
 
     <div id="startPanel">
@@ -249,12 +203,7 @@ iframe {
 
 <!-- TOP -->
 <div id="timer">40:00</div>
-<div id="warningCounter">Warnings: 0 / 3</div>
-
-<!-- WARNING BAR -->
-<div id="violationOverlay">
-  ⚠ Rules broken — You have <span id="violationCountdown">20</span> seconds to submit your work before it is lost.
-</div>
+<div id="violationCounter">Violations: 0</div>
 
 <!-- LOG -->
 <div id="logBox">
@@ -270,7 +219,7 @@ iframe {
 
 <!-- FINAL -->
 <div id="finalScreen">
-  <h1>Assessment Ended</h1>
+  <h1>Assessment Status</h1>
   <p id="reason"></p>
 </div>
 
@@ -280,18 +229,17 @@ iframe {
 <script>
 
 let started = false;
+let ended = false;
 let violations = 0;
-let ending = false;
-let timeLeft = 40*60;
-
-const isMobile = /Android|iPhone/i.test(navigator.userAgent);
+let timeLeft = 40 * 60;
+let timerInterval;
 
 /* LOG */
 function log(msg){
-  document.getElementById("logContent").innerHTML += msg+"<br>";
+  document.getElementById("logContent").innerHTML += msg + "<br>";
 }
 
-/* START ENABLE */
+/* ENABLE START */
 document.getElementById("acceptRules").onchange = (e)=>{
   const btn = document.getElementById("startBtn");
   btn.disabled = !e.target.checked;
@@ -303,9 +251,9 @@ document.getElementById("startBtn").onclick = async ()=>{
   started = true;
   document.getElementById("warningScreen").style.display="none";
 
-  if(!isMobile){
-    await document.documentElement.requestFullscreen().catch(()=>{});
-  }
+  try {
+    await document.documentElement.requestFullscreen();
+  } catch(e){}
 
   log("Assessment started");
   startTimer();
@@ -313,88 +261,78 @@ document.getElementById("startBtn").onclick = async ()=>{
 
 /* TIMER */
 function startTimer(){
-  setInterval(()=>{
-    if(ending) return;
+  timerInterval = setInterval(()=>{
 
-    let m=Math.floor(timeLeft/60);
-    let s=timeLeft%60;
+    if(ended) return;
+
+    let m = Math.floor(timeLeft/60);
+    let s = timeLeft % 60;
 
     document.getElementById("timer").textContent =
       `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
 
+    if(timeLeft <= 0){
+
+      clearInterval(timerInterval);
+      ended = true;
+
+      document.getElementById("finalScreen").style.display="flex";
+      document.getElementById("reason").innerText =
+        "Time is up, please submit your work.";
+
+      document.querySelector("iframe").style.display="none";
+
+      log("Time ended");
+
+      return;
+    }
+
     timeLeft--;
+
   },1000);
 }
 
 /* TAB SWITCH */
 document.addEventListener("visibilitychange",()=>{
 
-  if(!started || ending) return;
+  if(!started || ended) return;
 
   if(document.hidden){
 
     violations++;
-    log("Tab switch detected");
 
-    const c = document.getElementById("warningCounter");
-    c.textContent = `Warnings: ${violations} / 3`;
+    document.getElementById("violationCounter").textContent =
+      `Violations: ${violations}`;
 
-    c.classList.remove("flash-yellow","flash-red");
-    void c.offsetWidth;
-
-    if(violations<3){
-      c.classList.add("flash-yellow");
-    }
-
-    if(violations>=3){
-
-      c.classList.add("flash-red");
-      ending=true;
-
-      log("Max violations reached");
-
-      const bar = document.getElementById("violationOverlay");
-      bar.style.display="block";
-
-      let countdown = 23;
-      const el = document.getElementById("violationCountdown");
-
-      const interval = setInterval(()=>{
-        countdown--;
-        el.textContent = countdown;
-
-        if(countdown<=0){
-          clearInterval(interval);
-          endTest("3 violations detected");
-        }
-      },1000);
-    }
+    log("Violation detected (" + violations + ")");
   }
 });
 
-/* FULLSCREEN */
+/* FULLSCREEN EXIT */
 document.addEventListener("fullscreenchange",()=>{
-  if(!started || isMobile) return;
+
+  if(!started || ended) return;
 
   if(!document.fullscreenElement){
-    log("Exited fullscreen");
+
+    violations++;
+
+    document.getElementById("violationCounter").textContent =
+      `Violations: ${violations}`;
+
+    log("Fullscreen exit violation (" + violations + ")");
+
     document.getElementById("controlPanel").style.display="flex";
   }
 });
 
-/* RETURN */
+/* RE-ENTER FULLSCREEN */
 document.getElementById("reenterBtn").onclick = async ()=>{
-  await document.documentElement.requestFullscreen();
-  document.getElementById("controlPanel").style.display="none";
-  log("Returned to fullscreen");
+  try {
+    await document.documentElement.requestFullscreen();
+    document.getElementById("controlPanel").style.display="none";
+  } catch(e){}
 };
-
-/* END */
-function endTest(reason){
-  document.getElementById("finalScreen").style.display="flex";
-  document.getElementById("reason").innerText=reason;
-  document.querySelector("iframe").style.display="none";
-}
 
 </script>
 

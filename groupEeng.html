@@ -1,1 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Secured OLC Assessment</title>
 
+<style>
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #EAF3FF;
+  color: #1b1b1b;
+  overflow: hidden;
+}
+
+/* START SCREEN */
+#warningScreen {
+  position: fixed;
+  inset: 0;
+  background: #EAF3FF;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  padding: 20px;
+  overflow-y: auto; /* FIX: allow scroll */
+}
+
+/* TWO COLUMN LAYOUT */
+#startContainer {
+  display: flex;
+  gap: 30px;
+  max-width: 900px;
+  width: 100%;
+}
+
+#rulesBox {
+  flex: 2;
+  background: white;
+  padding: 20px;
+  border-radius: 12px;
+  line-height: 1.6;
+}
+
+#startPanel {
+  flex: 1;
+  background: white;
+  padding: 20px;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+/* BUTTON */
+#startBtn {
+  margin-top: 20px;
+  padding: 15px 25px;
+  font-size: 18px;
+  border-radius: 10px;
+  border: none;
+  background: grey;
+  color: white;
+  cursor: not-allowed;
+}
+
+#startBtn.active {
+  background: #2d7dd2;
+  cursor: pointer;
+}
+
+/* TOP BAR */
+#timer {
+  position: fixed;
+  top: 10px;
+  right: 280px;
+  background: #1f3b57;
+  color: white;
+  padding: 10px;
+  border-radius: 8px;
+}
+
+#warningCounter {
+  position: fixed;
+  top: 60px;
+  right: 280px;
+  background: white;
+  padding: 8px;
+  border-radius: 8px;
+  font-weight: bold;
+}
+
+/* FLASH */
+@keyframes flashYellow {
+  0%,100% { background: gold; }
+  50% { background: transparent; }
+}
+@keyframes flashRed {
+  0%,100% { background: red; color:white; }
+  50% { background: transparent; }
+}
+.flash-yellow { animation: flashYellow 0.6s infinite; }
+.flash-red { animation: flashRed 0.6s infinite; }
+
+/* LOG */
+#logBox {
+  position: fixed;
+  right: 0;
+  top: 0;
+  width: 260px;
+  height: 100vh;
+  background: white;
+  overflow-y: auto;
+  padding: 10px;
+  font-size: 12px;
+}
+
+/* FULLSCREEN */
+#controlPanel {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.95);
+  display: none;
+  z-index: 999999;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  color: white;
+}
+
+#reenterBtn {
+  padding: 25px;
+  font-size: 24px;
+  background: red;
+  color: white;
+  border: none;
+  border-radius: 10px;
+}
+
+/* FINAL */
+#finalScreen {
+  position: fixed;
+  inset: 0;
+  background: #EAF3FF;
+  display: none;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  z-index: 9999999;
+}
+
+/* WARNING BAR */
+#violationOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: red;
+  color: white;
+  display: none;
+  z-index: 9999;
+  text-align: center;
+  padding: 15px;
+  font-size: 18px;
+  font-weight: bold;
+}
+
+/* IFRAME */
+iframe {
+  width: calc(100% - 260px);
+  height: 100vh;
+  border: none;
+}
+
+/* MOBILE */
+@media (max-width:768px){
+
+  #startContainer {
+    flex-direction: column;
+    max-height: 100vh;
+  }
+
+  #warningScreen {
+    align-items: flex-start;
+    overflow-y: auto;
+  }
+
+  #startPanel {
+    margin-top: 15px;
+  }
+
+  #logBox { display:none; }
+
+  #timer, #warningCounter {
+    top: 0;
+    height: 45px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  #timer { left:0; width:50%; right:auto; }
+  #warningCounter { left:50%; width:50%; right:auto; }
+
+  iframe {
+    width: 100%;
+    height: calc(100vh - 100px);
+    margin-top: 45px;
+  }
+}
+</style>
+</head>
+
+<body>
+
+<!-- START -->
+<div id="warningScreen">
+
+  <div id="startContainer">
+
+    <div id="rulesBox">
+      <h2>Rules</h2>
+      <p>Stay on this page during the test</p>
+      <p>Do not switch tabs or apps</p>
+      <p>You must stay in full screen (if supported)</p>
+      <p>Your activity is monitored</p>
+      <p>If you break the rules, the test will end</p>
+
+      <br>
+
+      <p>You will receive up to three warnings for breaking the rules.</p>
+      <p>After the third warning, you will have 20 seconds to submit your work before the assessment closes.</p>
+      <p>When the time ends, you will be given an additional 2 minutes to submit your work.</p>
+    </div>
+
+    <div id="startPanel">
+      <label>
+        <input type="checkbox" id="acceptRules">
+        I understand the rules
+      </label>
+
+      <button id="startBtn" disabled>Start Assessment</button>
+    </div>
+
+  </div>
+</div>
+
+<!-- TOP -->
+<div id="timer">40:00</div>
+<div id="warningCounter">Warnings: 0 / 3</div>
+
+<!-- WARNING BAR -->
+<div id="violationOverlay">
+  ⚠ Rules broken — You have <span id="violationCountdown">20</span> seconds to submit your work before it is lost.
+</div>
+
+<!-- LOG -->
+<div id="logBox">
+  <b>Activity Log</b><br>
+  <div id="logContent"></div>
+</div>
+
+<!-- FULLSCREEN -->
+<div id="controlPanel">
+  <h1>Fullscreen Required</h1>
+  <button id="reenterBtn">RETURN TO FULLSCREEN</button>
+</div>
+
+<!-- FINAL -->
+<div id="finalScreen">
+  <h1>Assessment Ended</h1>
+  <p id="reason"></p>
+</div>
+
+<!-- FORM -->
+<iframe src="https://docs.google.com/forms/d/e/1FAIpQLSd_K37fzY-q5Osuj3wdeoB3X8QvXAAuAGMMSt-Zej4gyKUCig/viewform?embedded=true"></iframe>
+
+<script>
+
+let started = false;
+let violations = 0;
+let ending = false;
+let timeLeft = 40*60;
+
+const isMobile = /Android|iPhone/i.test(navigator.userAgent);
+
+/* LOG */
+function log(msg){
+  document.getElementById("logContent").innerHTML += msg+"<br>";
+}
+
+/* START ENABLE */
+document.getElementById("acceptRules").onchange = (e)=>{
+  const btn = document.getElementById("startBtn");
+  btn.disabled = !e.target.checked;
+  btn.classList.toggle("active", e.target.checked);
+};
+
+/* START */
+document.getElementById("startBtn").onclick = async ()=>{
+  started = true;
+  document.getElementById("warningScreen").style.display="none";
+
+  if(!isMobile){
+    await document.documentElement.requestFullscreen().catch(()=>{});
+  }
+
+  log("Assessment started");
+  startTimer();
+};
+
+/* TIMER */
+function startTimer(){
+  setInterval(()=>{
+    if(ending) return;
+
+    let m=Math.floor(timeLeft/60);
+    let s=timeLeft%60;
+
+    document.getElementById("timer").textContent =
+      `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+
+    timeLeft--;
+  },1000);
+}
+
+/* TAB SWITCH */
+document.addEventListener("visibilitychange",()=>{
+
+  if(!started || ending) return;
+
+  if(document.hidden){
+
+    violations++;
+    log("Tab switch detected");
+
+    const c = document.getElementById("warningCounter");
+    c.textContent = `Warnings: ${violations} / 3`;
+
+    c.classList.remove("flash-yellow","flash-red");
+    void c.offsetWidth;
+
+    if(violations<3){
+      c.classList.add("flash-yellow");
+    }
+
+    if(violations>=3){
+
+      c.classList.add("flash-red");
+      ending=true;
+
+      log("Max violations reached");
+
+      const bar = document.getElementById("violationOverlay");
+      bar.style.display="block";
+
+      let countdown = 23;
+      const el = document.getElementById("violationCountdown");
+
+      const interval = setInterval(()=>{
+        countdown--;
+        el.textContent = countdown;
+
+        if(countdown<=0){
+          clearInterval(interval);
+          endTest("3 violations detected");
+        }
+      },1000);
+    }
+  }
+});
+
+/* FULLSCREEN */
+document.addEventListener("fullscreenchange",()=>{
+  if(!started || isMobile) return;
+
+  if(!document.fullscreenElement){
+    log("Exited fullscreen");
+    document.getElementById("controlPanel").style.display="flex";
+  }
+});
+
+/* RETURN */
+document.getElementById("reenterBtn").onclick = async ()=>{
+  await document.documentElement.requestFullscreen();
+  document.getElementById("controlPanel").style.display="none";
+  log("Returned to fullscreen");
+};
+
+/* END */
+function endTest(reason){
+  document.getElementById("finalScreen").style.display="flex";
+  document.getElementById("reason").innerText=reason;
+  document.querySelector("iframe").style.display="none";
+}
+
+</script>
+
+</body>
+</html>
